@@ -37,7 +37,7 @@ function renderer.draw_tile(screen_x, screen_y, symbol, color)
     end
 end
 
--- Main render pipeline: Compasses world layers, applies camera, and delta-blits to terminal
+-- Main render pipeline: Composites world layers, applies camera, and delta-blits to terminal
 function renderer.present(world, camera_x, camera_y)
     term_w, term_h = main.getTerminalSize()
     
@@ -50,27 +50,25 @@ function renderer.present(world, camera_x, camera_y)
 
     for sy = 1, term_h do
         for sx = 1, term_w do
-            -- Map screen coordinates to world coordinates
+            -- Map screen coordinates to world coordinates (supports negative numbers)
             local wx = camera_x + sx - half_w
             local wy = camera_y + sy - half_h
 
-            -- Check bounds of world
-            if wx >= 1 and wx <= world.width and wy >= 1 and wy <= world.height then
-                -- Layer priority: Terrain -> Buildings -> Items -> Entities (Pawns)
-                local tile = world.terrain[wy] and world.terrain[wy][wx]
-                local bldg = world.buildings[wy] and world.buildings[wy][wx]
-                local item = world.items and world.items[wy] and world.items[wy][wx]
-                local pawn = world.occupant[wy] and world.occupant[wy][wx]
+            -- Layer priority: Terrain -> Buildings -> Items -> Entities (Pawns)
+            -- Safe lookups allow infinite worlds in any direction without out-of-bounds checks
+            local tile = world.terrain and world.terrain[wy] and world.terrain[wy][wx]
+            local bldg = world.buildings and world.buildings[wy] and world.buildings[wy][wx]
+            local item = world.items and world.items[wy] and world.items[wy][wx]
+            local pawn = world.occupant and world.occupant[wy] and world.occupant[wy][wx]
 
-                if pawn then
-                    renderer.draw_tile(sx, sy, pawn.symbol, pawn.color)
-                elseif item then
-                    renderer.draw_tile(sx, sy, item.symbol, item.color)
-                elseif bldg then
-                    renderer.draw_tile(sx, sy, bldg.symbol, bldg.color)
-                elseif tile then
-                    renderer.draw_tile(sx, sy, tile.symbol, tile.color)
-                end
+            if pawn then
+                renderer.draw_tile(sx, sy, pawn.symbol, pawn.color)
+            elseif item then
+                renderer.draw_tile(sx, sy, item.symbol, item.color)
+            elseif bldg then
+                renderer.draw_tile(sx, sy, bldg.symbol, bldg.color)
+            elseif tile then
+                renderer.draw_tile(sx, sy, tile.symbol, tile.color)
             end
         end
     end
